@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 
 class single_dataframe:
   def __init__(self):
@@ -22,72 +23,58 @@ class single_dataframe:
   def process_csv(self, filename):
     dat = self.__read_csv(filename)
     self.file_name = filename
-    self.spreadsheet = dat
     dat.drop(dat.tail(1).index, inplace=True)
-    dat = pd.melt(dat, id_vars=['TIME'], var_name=["REAL 1"],value_name=" value")
+    
+    splicers = [-1] + np.where(np.isnan(dat.iloc[:,0]))[0].tolist() + [dat.shape[0]]
+    #return splicers
+    
+    dat_clean = None
+    for i in range(len(splicers) - 1):
+        key = dat.iloc[splicers[i] + 1,0] 
+        dat_block = dat\
+            .iloc[splicers[i] + 2 : splicers[i + 1],]\
+            .assign(
+                Frequency = key,
+                Reference = [x+1 for x in list(range(splicers[i + 1] - splicers[i] - 2))]
+            )
+        if dat_clean is None:
+            dat_clean = dat_block
+        else:
+            dat_clean = pd.concat([dat_clean, dat_block], axis = 0)
+    
+    dat_clean = pd.melt(
+        dat_clean, id_vars=['TIME', "Frequency", "Reference"],
+        var_name=["Identifier"],value_name=" value"
+    )
     #self.file_name = self.__filter_file_name(filename)
-    dat["Filename"] = self.file_name
-    dat["Reference"] = dat.index
-    dat["Date"] = filename[26:33]
-    dat["Chip Number"] = filename[20:22]
-    dat["Device Number"] = filename[23:25]
-    dat["Frequency"] = np.nan
-
-    flist = [1,251]
-    for i in flist:
-      if len(flist) < 841:
-        a = flist[0]+flist[1]
-        nextvalue = flist[-1]+a
-        flist.append(nextvalue)
-        nextvalue +=1
-
-    flistnumber = [10,32,54,76,98]
-    iteratetimes = 168
-    flistnumber_end = flistnumber * iteratetimes
-
-    n = 0
-    m = 0
-    for n in flistnumber_end:
-      for m in flist:
-        dat["Frequency"].iloc[flist[m]:flist[m+1]] = flistnumber_end[n]
-        n +=1
-        m +=1
-
-    print(len(flist))
-    print(flist)
-    print(dat.tail()) #212602
-    dat["Frequency"].iloc[flist[0]:flist[1]] = flistnumber_end[0]
-    dat["Frequency"].iloc[flist[1]:flist[2]] = flistnumber_end[1]
-    dat["Frequency"].iloc[flist[2]:flist[3]] = flistnumber_end[2]
-    dat["Frequency"].iloc[flist[3]:flist[4]] = flistnumber_end[3]
-    dat["Frequency"].iloc[flist[4]:flist[5]] = flistnumber_end[4]
-    self.spreadsheet = dat
+    filename = os.path.split(filename)[-1]
+    dat_clean["Filename"] = self.file_name
+    #dat_clean["Reference"] = dat_clean.index
+    dat_clean["Date"] = filename[26:33]
+    dat_clean["Chip Number"] = filename[20:22]
+    dat_clean["Device Number"] = filename[23:25]
+    self.spreadsheet = dat_clean
     self.output = self.spreadsheet
-
-    #mask1 = dat['value'].isna()
-    #groups = dat.output.loc[mask1].index
-    #print(groups)
-
-
-
+    
     return self
 
 
-dat= single_dataframe()
-dat.process_csv("/Users/ryan/Desktop/D1_C1_6.20.19_freqSweep_1-cell_edited.csv")
+if __name__ == "__main__":
+  dat= single_dataframe()
+  dat.process_csv("D1_C1_6.20.19_freqSweep_1-cell_edited.csv")
 
-print(dat.spreadsheet.head())
-#then when you are done modifying the dataframe this code will write it to a csv
-dat.output.to_csv(r'/Users/ryan/Desktop/ryan_generated.csv')
-print(len(dat.output))
-#class modified:
-#  def __init__(self):
-#    self.file = single_dataframe()
+  print(dat.spreadsheet.head())
+  #then when you are done modifying the dataframe this code will write it to a csv
+  # dat.output.to_csv(r'ryan_generated.csv')
+  # print(len(dat.output))
+  #class modified:
+  #  def __init__(self):
+  #    self.file = single_dataframe()
 
- # def getindex(self):
-  #  mask1 = self.file['value'].isna()
-   # groups = self.file.output.loc[mask1].index
-   # print(groups)
+  # def getindex(self):
+    #  mask1 = self.file['value'].isna()
+    # groups = self.file.output.loc[mask1].index
+    # print(groups)
 
-#dat.output = modified()
-#dat.output.getindex()
+  #dat.output = modified()
+  #dat.output.getindex()

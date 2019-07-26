@@ -1,3 +1,5 @@
 venv
 .idea
 .idea/vcs.xml
+.vscode
+*.ipynb
